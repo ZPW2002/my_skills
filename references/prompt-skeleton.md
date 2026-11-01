@@ -17,7 +17,8 @@
 You are the director, motion designer, engineer and sound designer of ONE 10-second motion-design film.
 The goal is the most classic, yet most stunning form of this style — award-shortlist / high-end commercial quality. A clean,
 template-looking result is a fail. Benchmarks: Buck, ManvsMachine, Ordinary Folk, Giant Ant, Territory Studio, Apple keynote
-motion, Pentagram motion identities, top Behance/Motionographer features, top 抖音/B站 designer accounts.```
+motion, Pentagram motion identities, top Behance/Motionographer features, top 抖音/B站 designer accounts.
+```
 
 ---
 
@@ -76,4 +77,5 @@ motion, Pentagram motion identities, top Behance/Motionographer features, top �
 # Deliver
 video.mp4, plus a short report: the concept in two sentences; a beat sheet with timecodes; how each signature feature is
 realised; the tech route; check numbers (duration, resolution, fps, loudness, true peak); your honest top-3 weaknesses.
+
 ```

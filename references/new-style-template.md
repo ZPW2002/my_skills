@@ -5,7 +5,7 @@
 # 写一种新风格的提示词
 
 每份风格提示词都由「通用部分」和「风格专属部分」组成。通用部分（开头的角色设定，以及 How to work / Rules / Craft checklist /
-自评 / Deliver）所有风格都一样，可以直接从任意一份 `prompts/*.md` 里复制。要写一种新风格，只需要填下面四段：
+自评 / Deliver）所有风格都一样，直接取用 `references/prompt-skeleton.md` 的开头角色段与通用尾部段（原样复制）。要写一种新风格，只需要填下面四段：
 
 ```text
 # Style

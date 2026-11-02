@@ -10,8 +10,15 @@
   - 开头段 "ONE <N>-second" 与 Output 时长一致
   - 与模板逐字一致：Style、Suggested technical route、Signature features、导演自主权段
   - 与骨架逐字一致：开头角色段（时长字样归一化后）、# How to work 起的通用尾部段
+  - 时长档位：> 30 s 必须声明章节结构（references/chapter-mode.md）
+  - seed 密度：占全文比例 ≤ 35%（超 25% 警告）、微指令每拍密度、短片的单一 HOOK
+  - 一致性 lint：禁令与用法互斥（如「禁光晕」又要求发光）、「镜头不停」与多处定格冲突、
+    未定义的量词 N、seed 色板数量与 Signature 配色约束冲突
   - Creative seed：节拍时间覆盖（HOOK ≤ 0.5s、结尾 ≈ 总时长）、色板 hex（< 3 时警告）、Sound 行存在
   - 全文无 AI 助手/工具产品名
+
+阈值依据：15 份原版 10 秒提示词的 seed 占比中位数 14%、最高 21%，故上限取 35%（留余量后仍能
+识别"brief 写成成片"的产物）。
 
 退出码：0 = 通过（可含警告）；1 = 存在 FAIL。
 """
@@ -72,6 +79,10 @@ def section_of(prompt: str, heading_prefix: str) -> str:
         r"(?ms)^# " + re.escape(heading_prefix) + r".*?$\n(.*?)(?=^# |\Z)")
     m = pattern.search(prompt)
     return m.group(1).strip() if m else ""
+
+
+def seed_of(prompt: str) -> str:
+    return section_of(prompt, "Creative seed")
 
 
 def norm_duration_token(text: str, seconds: float) -> str:
@@ -159,33 +170,115 @@ def main() -> int:
     p_tail = prompt[prompt.index("# How to work"):].strip() if "# How to work" in prompt else ""
     (ok if p_tail == skel_tail.strip() else fail)("通用尾部段（# How to work 起）与骨架逐字一致")
 
+    # ---- 时长档位：> 30 s 必须走章节模式 ----
+    LONG_FORM_SEC = 30
+    is_long = duration is not None and duration > LONG_FORM_SEC
+    if is_long:
+        has_heading = bool(re.search(r"(?im)^#\s*CHAPTERS|\[LOCK\]\s*(?:CHAPTERS|章节)", seed_of(prompt)))
+        chapter_lines = set(re.findall(
+            r"(?im)^[-*\s]*\d{1,2}\s*[·.]?[^\n]{0,60}?\d+(?:\.\d+)?\s*[–-]\s*(\d+(?:\.\d+)?)\s*s",
+            seed_of(prompt)))
+        mentions = len(re.findall(r"(?i)chapter|章节", seed_of(prompt)))
+        if has_heading or len(chapter_lines) >= 2 or mentions >= 2:
+            ok(f"长片（{duration:g}s > {LONG_FORM_SEC}s）已声明章节结构")
+        else:
+            fail(f"时长 {duration:g}s 超过 {LONG_FORM_SEC}s 但未声明章节结构——"
+                 "应按 references/chapter-mode.md 用 [LOCK] CHAPTERS 每章 10–20s 组织，"
+                 "否则只能逐拍写死")
+
     # ---- Creative seed ----
-    seed = section_of(prompt, "Creative seed")
+    seed = seed_of(prompt)
     if seed:
         beats = [(float(a), float(b)) for a, b in BEAT_RE.findall(seed)]
         if not beats:
-            warn("Creative seed 未检测到 'X–Ys' 秒级节拍（无法自动评估，请人工确认）")
+            warn("Creative seed 未检测到 'X–Ys' 秒级节拍（散文式 seed 可接受，请人工确认节拍感）")
         else:
             starts, ends = [b[0] for b in beats], [b[1] for b in beats]
-            if duration is not None:
-                if max(ends) >= duration - 1.5:
-                    ok(f"节拍覆盖到结尾：最后节拍止于 {max(ends)}s / 总时长 {duration:g}s")
-                else:
-                    fail(f"节拍未覆盖结尾：最后节拍止于 {max(ends)}s，总时长 {duration:g}s")
             if min(starts) <= 0.5:
                 ok(f"HOOK 及时：首个节拍始于 {min(starts)}s")
             else:
                 fail(f"HOOK 过晚：首个节拍始于 {min(starts)}s（应 ≤ 0.5s）")
+
+            # 三层 seed 只写 1 个样板拍，覆盖由 IDEA/CHAPTERS 承担，不做覆盖判定
+            if len(beats) >= 3:
+                if duration is not None:
+                    if max(ends) >= duration - 1.5:
+                        ok(f"节拍覆盖到结尾：最后节拍止于 {max(ends)}s / 总时长 {duration:g}s")
+                    else:
+                        fail(f"节拍未覆盖结尾：最后节拍止于 {max(ends)}s，总时长 {duration:g}s")
+            else:
+                ok(f"节拍 {len(beats)} 处（样板拍模式：覆盖由 IDEA/CHAPTERS 承担，不判覆盖）")
+
+            # 多 HOOK：短片只应有单钩子（长片的每章钩子由章节模式接管）
+            if not is_long:
+                n_hook = len(re.findall(r"\bHOOK\b", seed))
+                if n_hook >= 3:
+                    warn(f"HOOK 标记 {n_hook} 处——'a hook in the first 0.5 s' 要求单一钩子；"
+                         "多段 HOOK 会把开场判断稀释成清单核对")
+                elif n_hook:
+                    ok(f"HOOK 标记 {n_hook} 处")
+
         hexes = set(h.upper() for h in HEX_RE.findall(seed))
         if len(hexes) >= 3:
             ok(f"色板 hex：{len(hexes)} 个")
         else:
             warn(f"色板 hex 少于 3 个（当前 {len(hexes)}）——规范建议 3–6 个具体 hex；"
                  "若色彩已用文字具体描述（如原版 02 线条动画）可接受，请人工确认")
-        if re.search(r"(?m)^Sound:", seed):
+        if re.search(r"(?m)^[-*\s]*Sound\s*[:：]", seed):
             ok("Sound 行存在")
         else:
-            fail("缺少 Sound: 行（音乐风格 + BPM + 关键音效）")
+            fail("缺少 Sound 行（音乐风格 + BPM + 关键音效）")
+
+        # ---- seed 密度：brief 还是成片？ ----
+        ratio = len(seed) / max(len(prompt), 1)
+        if ratio > 0.35:
+            fail(f"seed 占全文 {ratio:.0%}（上限 35%）——brief 已膨胀成完成版 treatment，"
+                 "执行者没有创作余量。保留 IDEA/SURFACE 与 1 个样板拍，"
+                 "其余逐拍微指令移入 [FREE]")
+        elif ratio > 0.25:
+            warn(f"seed 占全文 {ratio:.0%}（建议 ≤25%）——检查是否把执行决策写死")
+        else:
+            ok(f"seed 占比 {ratio:.0%}（≤25%，brief 尺度）")
+
+        micro = re.findall(r"\d+\s*(?:frames?|帧|px)|\d+(?:\.\d+)?%|cubic-bezier\(", seed)
+        if len(beats) >= 3:
+            per = len(micro) / len(beats)
+            lvl = fail if per > 1.5 else (warn if per > 0.8 else ok)
+            lvl(f"微指令密度 {per:.2f}/拍（{len(micro)} 处 / {len(beats)} 拍；建议 ≤0.8——"
+                "帧数、像素、百分比应给判断标准而非逐个数值）")
+        elif len(micro) > 8:
+            warn(f"微指令 {len(micro)} 处（无秒级节拍时建议 ≤8）")
+        else:
+            ok(f"微指令 {len(micro)} 处")
+
+        # ---- 一致性 lint ----
+        prohib = re.search(r"禁[^。\n]{0,6}(?:光晕|发光|辉光|渐变)|no glow|never glow", seed)
+        if prohib:
+            outside = [m.start() for m in re.finditer(r"glow|发光|光晕|辉光", seed)
+                       if not prohib.start() <= m.start() < prohib.end()]
+            if outside:
+                fail(f"自相矛盾：声明「{prohib.group(0)}」却在别处要求发光 {len(outside)} 处")
+            else:
+                ok("发光禁令无冲突")
+
+        cont = re.search(r"never stops?|no cut|一镜到底|连续运镜|continuous camera|one continuous shot", seed, re.I)
+        n_freeze = len(re.findall(r"freeze|定格|静止", seed, re.I))
+        if cont and n_freeze >= 2:
+            warn(f"措辞冲突：「{cont.group(0)}」与 {n_freeze} 处定格/冻结并存——"
+                 "章卡定格若是有意的，改写为「不切黑场，章卡处短定格」以免执行者反复权衡")
+
+        m_pal = re.search(r"[Pp]alette\s+(\d+)\s+colou?rs?", seed)
+        m_sig_pal = re.search(r"克制配色[（(]\s*(\d+)\s*[~–-]\s*(\d+)\s*色", p_sig)
+        if m_pal and m_sig_pal:
+            n_seed, lo, hi = int(m_pal.group(1)), int(m_sig_pal.group(1)), int(m_sig_pal.group(2))
+            if n_seed > hi:
+                fail(f"违反 Signature：seed 用 {n_seed} 色，该风格要求「克制配色（{lo}~{hi} 色）」")
+            else:
+                ok(f"色板数量合规（{n_seed} ≤ {hi}）")
+
+        if re.search(r"\bN\s+(?:identical|stack|layers?|层|blocks?|copies)", seed):
+            warn("检测到未定义量词 N（如 'stack of N identical …'）——执行者无法确定数量；"
+                 "给出具体值，或明确写「由执行者决定并在报告中说明」")
     else:
         fail("Creative seed 段为空")
 

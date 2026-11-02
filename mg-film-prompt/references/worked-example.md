@@ -1,6 +1,6 @@
 # 端到端示例：从需求到生成提示词
 
-一个最小的完整走查，示范三件事：**怎么选风格**、**Creative seed 重写到什么程度**、**哪些内容逐字保留**。
+一个最小的完整走查，示范三件事：**怎么选风格**、**三层 seed 写到什么程度算够**、**哪些内容逐字保留**。
 生成正式提示词时，除 seed 外的段落一律从骨架与模板复制，不要仿写本示例的行文。
 
 ## 1. 用户需求（输入）
@@ -19,29 +19,33 @@
 
 ## 3. 重写后的 Creative seed（核心产出）
 
-对照 07 模板的 seed 基因逐条落位（缓动只被"甩"、细颈断裂回弹、次级液滴延迟跟随、结尾聚合成 wordmark），
-并按竖屏要求写明构图逻辑：
+只写 `[LOCK]` 与 1 个 `[REGISTER]` 样板拍，其余交给执行者。这段约 890 字符，约占全文 15%——
+和原版 15 份提示词（中位数 14%、最高 21%）同一量级，这才叫 brief。
 
 ```text
 # Creative seed
 「醒山 · 一杯山醒来」Morning-coffee liquid genesis for a specialty coffee brand, vertical social cut.
-- 1080×1920 portrait composition: one tall central column of motion, generous negative space above and below.
-- 0.0–0.5s HOOK: a single glossy amber droplet falls through cream-white space and SPLATS flat (squash on
-  landing) — instantly readable liquid physics, never a static open.
-- 0.5–3.0s: droplets stream down the central column, merging via metaball fusion — stretched necks, snap,
-  2–3 frame rebound; secondary drips follow 2–3 frames late; latte-caramel tones swirl into the amber.
-- 3.0–5.5s: a big liquid wave floods DOWNWARD across the frame as a transition (wavy front with 3–5
-  phase-offset bulges), revealing a minimal cup silhouette line.
-- 5.5–8.0s HERO: the liquid coalesces into a steaming cup that tips and pours one last drop; the drop
-  becomes the 醒山 wordmark (text SDF blended with the metaballs), tagline 一杯山醒来 fades up beneath it.
-- 8.0–10.0s: wordmark settles with living micro-motion; a last drip falls and ripples once; hold.
-- Palette 4 colours: espresso brown #3B2A20, caramel #C68B4E, cream #F5EDE0, fresh green accent #7FA65A.
-- Ease: flung, never uniform (cubic-bezier(0.22,1,0.36,1)).
-Sound: warm lo-fi bossa ~90 BPM; bubbly gloops, pour, splash, drip synced to the frame; soft chime on the
-wordmark landing.
+
+[LOCK] IDEA
+- 论点：一杯好咖啡的"醒来"是液体自己长出来的形状，不是被摆出来的。
+- 论证脊柱：一滴 → 汇聚成流 → 漫过画面 → 聚成杯与字。
+- 不变量：结尾 wordmark 的轮廓完全由同一条液体流动路径聚合而成（无硬切、无二次建模）。
+
+[LOCK] SURFACE
+- 色板：espresso #3B2A20、caramel #C68B4E、cream #F5EDE0、leaf #7FA65A（4 色，贴合 07 的邻近色规则）。
+- 字体 / 质感：细体无衬线，字距舒展；液体全程高光 + fresnel 边缘，读作厚液体而非平面色块。
+- 构图：1080×1920 竖向，运动集中在中央单列，上下留大负空间；所有生长沿竖向展开。
+- Sound：lo-fi bossa 约 90 BPM；gloop / pour / splash / drip 拟音，wordmark 落定时一声轻铃。
+
+[REGISTER] 样板拍
+- 0.0–1.2s HOOK: 琥珀色液滴自上方落入米白空间，砸落时 squash 扁平化——单主体、单一动作、
+  高光锐利；全片其余节拍照此密度组织。
+
+[FREE] 其余节拍、液滴次级跟随、缓动曲线、转场机制——由执行者设计，在交付报告中说明选择理由。
 ```
 
-导演自主权段（You are the director: you may change…）原样保留在其后，不得改写。
+对照 07 模板的 seed 基因逐条落位：缓动只被"甩"、细颈断裂回弹、次级液滴延迟跟随、结尾聚合成 wordmark——
+这些写在模板的 Signature features 里，**逐字保留**，不进 seed。
 
 ## 4. 拼装清单
 
@@ -51,7 +55,7 @@ wordmark landing.
 | `# Style` | 07 模板逐字 |
 | `# Output (fixed)` | 改数值：`1080×1920, 30 fps, exactly 10.000 s (300 frames)`，`(fixed)` 标签保留 |
 | `# Suggested technical route` | 07 模板逐字 |
-| `# Creative seed` | 上文重写版 |
+| `# Creative seed` | 上文三层版 |
 | 导演自主权段 | 07 模板逐字 |
 | `# Signature features…` | 07 模板逐字 |
 | `# How to work` 至结尾 | 骨架第 3 块逐字 |
@@ -64,4 +68,9 @@ wordmark landing.
 python3 scripts/check_prompt.py out/prompt-xingshan-07.md --template styles/templates/07-liquid.md
 ```
 
-再按 SKILL.md Step 4 清单人工判断节拍创意质量，然后按 Step 5 的字面结构交付三部分。
+预期全绿。再按 SKILL.md Step 4 清单判断"论点是否立得住、样板拍够不够好"，然后按 Step 5 的字面结构交付三部分。
+
+## 6. 如果这支片要 60 秒怎么办
+
+不要把这 10 秒的节拍表拉长四倍——读 `references/chapter-mode.md`，改用 `[LOCK] CHAPTERS`：
+每章 10–20 秒、各写一句章任务与收尾形态，全片只留一个 HERO。章内怎么做，仍然是执行者的活。
